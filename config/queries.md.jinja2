@@ -1,0 +1,18 @@
+# Query Report
+
+{% for query in queries %}
+## {{ query.name }}
+- **Type**: {{ query.type }}
+- **ID**: {{ query.id }}
+{% if query.database %}
+- **Database**: {{ query.database }}
+{% endif %}
+- **Description**: {{ query.description }}
+
+### Query:
+
+```cypher
+{{ query.query }}
+```
+
+{% endfor %}

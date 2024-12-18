@@ -1,0 +1,24 @@
+queries:
+  - type: "qc"
+    id: "disease-name-duplicates"
+    name: "Duplicate Diseases"
+    description: "Find diseases with the same name."
+    database: "neo4j"
+    query: >
+      MATCH (n:`biolink:Disease`)
+      WHERE n.name IS NOT NULL AND n.id IS NOT NULL
+      WITH toLower(n.name) AS lower_name, COLLECT(n.id) AS ids
+      WHERE SIZE(ids) > 1
+      RETURN lower_name AS Name, SIZE(ids) AS Count, apoc.text.join(ids, '|') AS IDs
+      ORDER BY Count DESC, Name ASC
+  - type: "antipattern"
+    id: "disease-not-subclass-of-disease-in-mondo"
+    name: "Disease not subclass of Disease in MONDO"
+    database: "neo4j"
+    description: "Find diseases which are not subsumed under MONDO:0000001"
+    query: >
+      MATCH (d:`biolink:Disease`)
+      WHERE NOT EXISTS {
+          MATCH (d)-[:`biolink:subclass_of`]->(:`biolink:Disease` {id: "MONDO:0000001"})
+      }
+      RETURN d
