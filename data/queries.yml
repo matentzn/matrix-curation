@@ -26,3 +26,70 @@ queries:
           MATCH (d)-[:`biolink:subclass_of`]->(:`biolink:Disease` {id: "MONDO:0000001"})
       }
       RETURN d
+  - type: "qc"
+    id: "Conflicting Relationships (treats/causes)"
+    description: "Holds between two nodes where a positive relationship and a negative relationship 
+                coexist, indicating conflicting or dual impacts of one entity on the other."
+    # This contrasting relationship type can apply to other sets of predicates. However, this is probably the most important
+    # set for EC-Matrix.
+    # 1) Affects Relationships
+    #    positive_affects = ['biolink:increases_amount_or_activity_of', 'biolink:increases_response_to', 'biolink:positively_correlated_with']
+    #    negative_affects = ['biolink:decreases_amount_or_activity_of', 'biolink:decreases_response_to', 'biolink:negatively_correlated_with']
+    #
+    # 2) Likelihood Relationships
+    #    positive_likelihood = ['biolink:increased_likelihood_associated_with', 'biolink:associated_with_increased_likelihood_of']
+    #    negative_likelihood = ['biolink:decreased_likelihood_associated_with', 'biolink:associated_with_decreased_likelihood_of']
+    #
+    # 3) Interaction Types
+    #    positive_interaction = ['biolink:enables', 'biolink:catalyzes']
+    #    negative_interaction = ['biolink:disrupts', 'biolink:disrupted_by']
+    database: "neo4j"
+    query: >
+      MATCH (n1)-[r1]->(n2), 
+            (n1)-[r2]->(n2)
+      WHERE type(r1) IN ["biolink:ameliorates_condition",
+          "biolink:applied_to_treat",
+          "biolink:beneficial_in_models_for",
+          "biolink:in_clinical_trials_for",
+          "biolink:n_preclinical_trials_for",
+          "biolink:preventative_for_condition",
+          "biolink:studied_to_treat",
+          "biolink:treats",
+          "biolink:treats_or_applied_or_studied_to_treat"]
+            AND type(r2) IN ["biolink:contraindicated_in",
+          "biolink:exacerbates_condition",
+          "biolink:promotes_condition" ]
+      RETURN n1.name, n2.name, type(r1), r1.primary_knowledge_source, type(r2), r2.primary_knowledge_source
+  - type: "qc"
+    id: "orphan-nodes"
+    name: "Orphan Nodes"
+    description: "Find nodes that do not have any relationships."
+    database: "neo4j"
+    query: >
+      MATCH (n)
+      WHERE NOT (n)-[]-()
+      RETURN n.id AS NodeID, labels(n) AS Labels
+    expected_result:
+      ct_records:
+        min: 0
+        max: 10000
+  - type: "qc"
+    id: "self-referential-edges"
+    name: "Self-Referential Edges"
+    description: "Find nodes that have self-referential edges (relationships to themselves)."
+    # Sometimes these are ok, but I cannot come up with a good exception to loops right now.
+    database: "neo4j"
+    query: >
+      MATCH (n)-[r]->(n)
+      RETURN n.id AS NodeID, type(r) AS RelationshipType
+  - type: "qc"
+    id: "conflicting-drug-mechanisms"
+    name: "Drugs with Conflicting Mechanisms"
+    description: "Find drugs that are both inhibitors and activators of the same target."
+    database: "neo4j"
+    query: >
+      MATCH (d:`biolink:Drug`)-[r1:`biolink:decreases_activity_of`]->(t:`biolink:Protein`),
+            (d)-[r2:`biolink:increases_activity_of`]->(t)
+      RETURN d.id AS DrugID, d.name AS DrugName, t.id AS TargetID, t.name AS TargetName
+    
+    
