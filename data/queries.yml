@@ -11,6 +11,10 @@ queries:
       WHERE SIZE(ids) > 1
       RETURN lower_name AS Name, SIZE(ids) AS Count, apoc.text.join(ids, '|') AS IDs
       ORDER BY Count DESC, Name ASC
+    expected_result:
+      ct_records:
+        min: 2000
+        max: 10000
   - type: "antipattern"
     id: "disease-not-subclass-of-disease-in-mondo"
     name: "Disease not subclass of Disease in MONDO"
